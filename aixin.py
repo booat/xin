@@ -108,7 +108,7 @@ if __name__ == "__main__":
             color = random.choice(COLORS)
             create_note_window(rx, ry, text, color)
             occupied.append((rx, ry, WINDOW_WIDTH, WINDOW_HEIGHT))
-            root.after(random.randint(150, 400), random_spawn)
+            root.after(random.randint(50, 150), random_spawn)
 
         # 爱心窗口的位置也加入已占用列表
         for x, y in points:
