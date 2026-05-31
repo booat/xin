@@ -179,14 +179,46 @@ function stopAll() {
   stopped = true;
   clearTimeout(randomTimer);
   clearTimeout(stopTimer);
-  document.querySelectorAll('.note').forEach((el, i) => {
+  document.getElementById('stopBtn').style.display = 'none';
+
+  const allNotes = document.querySelectorAll('.note');
+  const missYou = [];
+  const others = [];
+
+  allNotes.forEach(el => {
+    if (el.textContent.trim() === '我想你了') {
+      missYou.push(el);
+    } else {
+      others.push(el);
+    }
+  });
+
+  // 先关掉其他便签
+  others.forEach((el, i) => {
     setTimeout(() => {
       el.classList.add('float-out');
       setTimeout(() => el.remove(), 500);
-    }, i * 30);
+    }, i * 20);
   });
-  document.getElementById('hint').textContent = '✨ 感谢观看 ✨';
-  document.getElementById('stopBtn').style.display = 'none';
+
+  // 等其他都消失后，"我想你了"最后消失
+  const othersDone = others.length * 20 + 500;
+  setTimeout(() => {
+    document.getElementById('hint').textContent = '💕';
+    document.getElementById('hint').style.fontSize = '32px';
+    missYou.forEach((el, i) => {
+      setTimeout(() => {
+        el.classList.add('float-out');
+        setTimeout(() => el.remove(), 500);
+        if (i === missYou.length - 1) {
+          setTimeout(() => {
+            document.getElementById('hint').textContent = '✨ 感谢观看 ✨';
+            document.getElementById('hint').style.fontSize = '14px';
+          }, 600);
+        }
+      }, i * 100);
+    });
+  }, othersDone);
 }
 
 // ===== 随机飘洒 =====

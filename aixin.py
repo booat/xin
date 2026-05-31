@@ -49,9 +49,6 @@ def create_note_window(x, y, text, color, fade_in=True):
     label = tk.Label(win, text=text, font=("微软雅黑", 11, "bold"), bg=color, fg="black")
     label.pack(expand=True)
 
-    # 空格键退出整个程序
-    win.bind("<space>", lambda e: win.master.destroy())
-
     if fade_in:
         win.attributes("-alpha", 0.0)  # 初始完全透明
         _fade_in(win)
@@ -91,50 +88,55 @@ if __name__ == "__main__":
             text = random.choice(TEXTS)
             color = random.choice(COLORS)
             win = create_note_window(x, y, text, color)
-            all_windows.append(win)
+            all_windows.append((win, text))  # 存窗口和文字
             root.update()
             time.sleep(0.01)  # 控制弹出速度，越小越快
-
-        # 收集所有已占用的位置（用于碰撞检测）
-        occupied = []  # [(x, y, w, h), ...]
-
-        def is_overlapping(x, y):
-            """检查新窗口是否与已有窗口重叠"""
-            for ox, oy, ow, oh in occupied:
-                if (x < ox + ow and x + WINDOW_WIDTH > ox and
-                    y < oy + oh and y + WINDOW_HEIGHT > oy):
-                    return True
-            return False
-
-        def find_empty_spot():
-            """找一个不重叠的位置，连续尝试失败返回 None"""
-            for _ in range(MAX_TRY):
-                rx = random.randint(0, sw - WINDOW_WIDTH)
-                ry = random.randint(0, sh - WINDOW_HEIGHT)
-                if not is_overlapping(rx, ry):
-                    return rx, ry
-            return None
 
         print("爱心便签已全部创建！开始全屏随机飘洒...")
 
         def random_spawn():
             """全屏随机生成便签，永不停止，空格键手动退出"""
+            if not running[0]:
+                return
             rx = random.randint(0, sw - WINDOW_WIDTH)
             ry = random.randint(0, sh - WINDOW_HEIGHT)
-            text = random.choice(TEXTS)  
+            text = random.choice(TEXTS)
             color = random.choice(COLORS)
-            create_note_window(rx, ry, text, color)
+            win = create_note_window(rx, ry, text, color)
+            all_windows.append((win, text))
+            win.bind("<space>", lambda e: stop_all())
             root.after(random.randint(10, 40), random_spawn)
 
-        # 爱心窗口的位置也加入已占用列表
-        for x, y in points:
-            occupied.append((x, y, WINDOW_WIDTH, WINDOW_HEIGHT))
+        running = [True]  # 用列表装，闭包可修改
+
+        def stop_all():
+            """分两阶段关闭：先关普通便签，最后留下'我想你了'"""
+            running[0] = False  # 停止生成新窗口
+            # 分离我想你了和其他
+            miss_you = [w for w, t in all_windows if t == "我想你了" and w.winfo_exists()]
+            others = [w for w, t in all_windows if t != "我想你了" and w.winfo_exists()]
+
+            # 第一阶段：关闭其他便签
+            for i, w in enumerate(others):
+                w.after(i * 30, w.destroy)
+
+            # 第二阶段：等其他消失完，再关闭"我想你了"
+            delay = len(others) * 30 + 800
+            for i, w in enumerate(miss_you):
+                w.after(delay + i * 200, w.destroy)
+
+            # 最后关闭主窗口
+            root.after(delay + len(miss_you) * 200 + 800, root.destroy)
+
+        # 空格键分阶段退出
+        for win, _ in all_windows:
+            win.bind("<space>", lambda e: stop_all())
 
         # 爱心展示完等 0.5 秒后开始随机飘洒
         root.after(500, random_spawn)
 
-        # 15 秒后自动关闭程序，防止窗口太多电脑卡死
-        root.after(15000, root.destroy)
+        # 15 秒后自动关闭程序
+        root.after(15000, stop_all)
         root.mainloop()
         print("程序已退出")
     except Exception as e:
