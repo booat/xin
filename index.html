@@ -116,20 +116,39 @@ function createNote(x, y, text, color, cls) {
 }
 
 // ===== 音乐控制 =====
+const bgm = document.getElementById('bgm');
+const musicBtn = document.getElementById('musicBtn');
+
+function updateMusicUI(playing) {
+  musicBtn.textContent = playing ? '🎶' : '🎵';
+  musicBtn.classList.toggle('playing', playing);
+}
+
+function playMusic() {
+  bgm.play().then(() => updateMusicUI(true)).catch(() => {});
+}
+
+// 尝试自动播放
+bgm.play().then(() => {
+  updateMusicUI(true);
+}).catch(() => {
+  // 浏览器阻止自动播放，等用户首次交互后再播
+  updateMusicUI(false);
+  function playOnInteract() {
+    playMusic();
+    document.removeEventListener('pointerdown', playOnInteract);
+    document.removeEventListener('touchstart', playOnInteract);
+  }
+  document.addEventListener('pointerdown', playOnInteract);
+  document.addEventListener('touchstart', playOnInteract);
+});
+
 function toggleMusic() {
-  const bgm = document.getElementById('bgm');
-  const btn = document.getElementById('musicBtn');
   if (bgm.paused) {
-    bgm.play().then(() => {
-      btn.textContent = '🎶';
-      btn.classList.add('playing');
-    }).catch(() => {
-      alert('播放失败，请再点一次');
-    });
+    playMusic();
   } else {
     bgm.pause();
-    btn.textContent = '🎵';
-    btn.classList.remove('playing');
+    updateMusicUI(false);
   }
 }
 
