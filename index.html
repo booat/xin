@@ -13,6 +13,35 @@
     touch-action: manipulation;
     -webkit-user-select: none; user-select: none;
   }
+
+  /* ===== 开始界面 ===== */
+  #landing {
+    position: fixed; inset: 0; z-index: 99999;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: #1a1a2e; cursor: pointer;
+    transition: opacity 0.6s ease-out;
+  }
+  #landing.hidden {
+    opacity: 0; pointer-events: none;
+  }
+  #landing .heart-icon {
+    font-size: 80px; animation: heartbeat 1.2s ease-in-out infinite;
+  }
+  @keyframes heartbeat {
+    0%, 100% { transform: scale(1); }
+    15% { transform: scale(1.25); }
+    30% { transform: scale(1); }
+    45% { transform: scale(1.15); }
+    60% { transform: scale(1); }
+  }
+  #landing .title {
+    color: #fff; font-size: 26px; font-weight: bold; margin-top: 20px;
+  }
+  #landing .subtitle {
+    color: rgba(255,255,255,0.5); font-size: 15px; margin-top: 10px;
+  }
+
+  /* ===== 便签 ===== */
   .note {
     position: absolute; border-radius: 8px;
     display: flex; align-items: center; justify-content: center;
@@ -34,7 +63,7 @@
   #hint {
     position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
     color: rgba(255,255,255,0.6); font-size: 14px; z-index: 9999;
-    pointer-events: none; transition: opacity 0.5;
+    pointer-events: none; transition: opacity 0.5s;
   }
   #stopBtn {
     position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
@@ -57,29 +86,38 @@
 </head>
 <body>
 
-<audio id="bgm" src="music.m4a" loop preload="auto"></audio>
-<button id="musicBtn" onclick="toggleMusic()" title="播放音乐">🎵</button>
+<!-- 开始界面 -->
+<div id="landing" onclick="startApp()">
+  <div class="heart-icon">❤️</div>
+  <div class="title">点击开始</div>
+  <div class="subtitle">一份小惊喜送给你</div>
+</div>
 
+<audio id="bgm" src="music.m4a" loop preload="auto"></audio>
+<button id="musicBtn" onclick="toggleMusic()" title="音乐">🎵</button>
 <button id="stopBtn" onclick="stopAll()">⏹ 结束</button>
 <div id="hint">💡 点击便签可关闭 | 爱心展示后随机飘洒</div>
 
 <script>
 // ===== 配置 =====
 const CONFIG = {
-  noteW: 100,        // 便签宽度
-  noteH: 48,         // 便签高度
-  total: 80,         // 爱心便签数量
-  randomInterval: [10, 40], // 随机弹出间隔(ms)
-  heartDelay: 500,   // 爱心完成后等待多久开始随机(ms)
-  autoStop: 15000,   // 15秒后自动停止
+  noteW: 100,
+  noteH: 48,
+  total: 80,
+  randomInterval: [10, 40],
+  heartDelay: 500,
+  autoStop: 15000,
 };
 
 const COLORS = ["#FF6B8A", "#FF8E6B", "#FFD93D", "#6BCB77", "#4D96FF", "#9B59B6", "#FF85A2", "#5DADE2"];
 const TEXTS = ["要有个好心情鸭", "好好爱自己", "多喝水哦~", "好好吃饭", "别熬夜", "相信自己", "开开心心", "我想你了"];
 
+const bgm = document.getElementById('bgm');
+const musicBtn = document.getElementById('musicBtn');
 let randomTimer = null;
 let stopTimer = null;
 let stopped = false;
+let started = false;
 
 // ===== 心形坐标 =====
 function heartPoints(n, sw, sh, nw, nh) {
@@ -96,16 +134,15 @@ function heartPoints(n, sw, sh, nw, nh) {
 }
 
 // ===== 创建便签 =====
-function createNote(x, y, text, color, cls) {
+function createNote(x, y, text, color) {
   const el = document.createElement('div');
-  el.className = 'note' + (cls ? ' ' + cls : '');
+  el.className = 'note';
   el.style.cssText = `
     left:${x}px; top:${y}px;
     width:${CONFIG.noteW}px; height:${CONFIG.noteH}px;
     background:${color}; color:#fff; font-size:13px;
   `;
   el.textContent = text;
-  // 点击关闭
   el.addEventListener('pointerdown', (e) => {
     e.stopPropagation();
     el.classList.add('float-out');
@@ -116,9 +153,6 @@ function createNote(x, y, text, color, cls) {
 }
 
 // ===== 音乐控制 =====
-const bgm = document.getElementById('bgm');
-const musicBtn = document.getElementById('musicBtn');
-
 function updateMusicUI(playing) {
   musicBtn.textContent = playing ? '🎶' : '🎵';
   musicBtn.classList.toggle('playing', playing);
@@ -128,28 +162,9 @@ function playMusic() {
   bgm.play().then(() => updateMusicUI(true)).catch(() => {});
 }
 
-// 尝试自动播放
-bgm.play().then(() => {
-  updateMusicUI(true);
-}).catch(() => {
-  // 浏览器阻止自动播放，首次交互后自动播放（用捕获阶段，穿透所有元素）
-  updateMusicUI(false);
-  function playOnInteract() {
-    playMusic();
-    document.removeEventListener('click', playOnInteract, true);
-    document.removeEventListener('touchstart', playOnInteract, true);
-  }
-  document.addEventListener('click', playOnInteract, true);
-  document.addEventListener('touchstart', playOnInteract, true);
-});
-
 function toggleMusic() {
-  if (bgm.paused) {
-    playMusic();
-  } else {
-    bgm.pause();
-    updateMusicUI(false);
-  }
+  if (bgm.paused) { playMusic(); }
+  else { bgm.pause(); updateMusicUI(false); }
 }
 
 // ===== 停止所有 =====
@@ -180,7 +195,7 @@ function randomSpawn() {
 }
 
 // ===== 主流程 =====
-function main() {
+function runHeart() {
   const sw = window.innerWidth, sh = window.innerHeight;
   const pts = heartPoints(CONFIG.total, sw, sh, CONFIG.noteW, CONFIG.noteH);
 
@@ -194,10 +209,7 @@ function main() {
         setTimeout(() => {
           if (!stopped) {
             randomSpawn();
-            // 15秒后自动停止
-            stopTimer = setTimeout(() => {
-              stopAll();
-            }, CONFIG.autoStop);
+            stopTimer = setTimeout(() => stopAll(), CONFIG.autoStop);
           }
         }, CONFIG.heartDelay);
       }
@@ -205,7 +217,21 @@ function main() {
   });
 }
 
-main();
+// ===== 点击开始 =====
+function startApp() {
+  if (started) return;
+  started = true;
+
+  // 播放音乐
+  playMusic();
+
+  // 隐藏开始界面
+  document.getElementById('landing').classList.add('hidden');
+  setTimeout(() => document.getElementById('landing').remove(), 600);
+
+  // 启动爱心
+  runHeart();
+}
 </script>
 </body>
 </html>
