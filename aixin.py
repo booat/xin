@@ -9,11 +9,16 @@ SCREEN_HEIGHT = 1080
 WINDOW_WIDTH = 160
 WINDOW_HEIGHT = 70
 TOTAL_WINDOWS = 100    # 爱心便签数量
-MAX_TRY = 200          # 尝试多少次找不到空位就认为屏幕满了
+MAX_TRY = 500          # 尝试多少次找不到空位就认为屏幕满了
+BATCH_SIZE = 3         # 每批同时生成几个便签
 COLORS = ["#FFB6C1", "#87CEEB", "#98FB98", "#FFA07A", "#DDA0DD", "#F0E68C"]  # 便签背景色
 TEXTS = [
-    "保持好心情", "好好爱自己", "多喝水哦~", "好好吃饭",
-    "别熬夜", "相信自己", "顺顺利利", "我想你了"
+    "每天都要开心呀", "好好吃饭哦", "别太累啦", "记得多喝水",
+    "早点睡呀", "照顾好自己", "万事顺心～", "笑容常在呀",
+    "好好生活", "放宽心哦", "元气满满每一天", "三餐都要好好吃",
+    "愿你事事顺利", "好好休息呀", "保持好心情", "别胡思乱想啦",
+    "日子甜甜的", "一定要快乐", "平安喜乐呀", "慢慢来就好",
+    "我想你了", "我想你了", "我想你了", "我想你了",
 ]
 
 def generate_heart_points(count, sw, sh, ww, wh):
@@ -33,8 +38,8 @@ def generate_heart_points(count, sw, sh, ww, wh):
     return points
 
 
-def create_note_window(x, y, text, color):
-    """创建单个便签窗口"""
+def create_note_window(x, y, text, color, fade_in=True):
+    """创建单个便签窗口，可选渐进淡入效果"""
     win = tk.Toplevel()
     win.title(text)
     win.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{int(x)}+{int(y)}")
@@ -47,7 +52,22 @@ def create_note_window(x, y, text, color):
     # 空格键退出整个程序
     win.bind("<space>", lambda e: win.master.destroy())
 
+    if fade_in:
+        win.attributes("-alpha", 0.0)  # 初始完全透明
+        _fade_in(win)
+
     return win
+
+
+def _fade_in(win, step=0, total=10):
+    """渐进淡入：分 10 步从透明到不透明"""
+    alpha = (step + 1) / total
+    try:
+        win.attributes("-alpha", alpha)
+    except tk.TclError:
+        return  # 窗口已被关闭
+    if step < total - 1:
+        win.after(30, lambda: _fade_in(win, step + 1, total))
 
 
 if __name__ == "__main__":
@@ -98,17 +118,13 @@ if __name__ == "__main__":
         print("爱心便签已全部创建！开始全屏随机飘洒...")
 
         def random_spawn():
-            """全屏随机生成便签，直到铺满屏幕"""
-            spot = find_empty_spot()
-            if spot is None:
-                print("屏幕已铺满，飘洒结束！")
-                return
-            rx, ry = spot
-            text = random.choice(TEXTS)
+            """全屏随机生成便签，永不停止，空格键手动退出"""
+            rx = random.randint(0, sw - WINDOW_WIDTH)
+            ry = random.randint(0, sh - WINDOW_HEIGHT)
+            text = random.choice(TEXTS)  
             color = random.choice(COLORS)
             create_note_window(rx, ry, text, color)
-            occupied.append((rx, ry, WINDOW_WIDTH, WINDOW_HEIGHT))
-            root.after(random.randint(50, 150), random_spawn)
+            root.after(random.randint(10, 40), random_spawn)
 
         # 爱心窗口的位置也加入已占用列表
         for x, y in points:
@@ -116,6 +132,9 @@ if __name__ == "__main__":
 
         # 爱心展示完等 0.5 秒后开始随机飘洒
         root.after(500, random_spawn)
+
+        # 15 秒后自动关闭程序，防止窗口太多电脑卡死
+        root.after(15000, root.destroy)
         root.mainloop()
         print("程序已退出")
     except Exception as e:
