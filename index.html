@@ -132,15 +132,15 @@ function playMusic() {
 bgm.play().then(() => {
   updateMusicUI(true);
 }).catch(() => {
-  // 浏览器阻止自动播放，等用户首次交互后再播
+  // 浏览器阻止自动播放，首次交互后自动播放（用捕获阶段，穿透所有元素）
   updateMusicUI(false);
   function playOnInteract() {
     playMusic();
-    document.removeEventListener('pointerdown', playOnInteract);
-    document.removeEventListener('touchstart', playOnInteract);
+    document.removeEventListener('click', playOnInteract, true);
+    document.removeEventListener('touchstart', playOnInteract, true);
   }
-  document.addEventListener('pointerdown', playOnInteract);
-  document.addEventListener('touchstart', playOnInteract);
+  document.addEventListener('click', playOnInteract, true);
+  document.addEventListener('touchstart', playOnInteract, true);
 });
 
 function toggleMusic() {
