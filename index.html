@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>爱心便签</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 100vw; height: 100vh; overflow: hidden;
+    background: #1a1a2e;
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    touch-action: manipulation;
+    -webkit-user-select: none; user-select: none;
+  }
+  .note {
+    position: absolute; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: bold; text-align: center; cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    transition: transform 0.15s;
+  }
+  .note:active { transform: scale(0.9); }
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0); }
+  }
+  @keyframes floatAway {
+    to { opacity: 0; transform: scale(0.3) translateY(-200px); }
+  }
+  .float-out { animation: floatAway 0.5s ease-out forwards !important; }
+
+  #hint {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+    color: rgba(255,255,255,0.6); font-size: 14px; z-index: 9999;
+    pointer-events: none; transition: opacity 0.5s;
+  }
+  #stopBtn {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+    background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3);
+    padding: 10px 30px; border-radius: 25px; font-size: 16px; z-index: 10000;
+    cursor: pointer; backdrop-filter: blur(10px);
+  }
+  #stopBtn:active { background: rgba(255,255,255,0.3); }
+</style>
+</head>
+<body>
+
+<button id="stopBtn" onclick="stopAll()">⏹ 结束</button>
+<div id="hint">💡 点击便签可关闭 | 爱心展示后随机飘洒</div>
+
+<script>
+// ===== 配置 =====
+const CONFIG = {
+  noteW: 100,        // 便签宽度
+  noteH: 48,         // 便签高度
+  total: 80,         // 爱心便签数量
+  randomLimit: 40,   // 随机飘洒上限
+  randomInterval: [300, 700], // 随机弹出间隔(ms)
+  heartDelay: 1200,  // 爱心完成后等待多久开始随机(ms)
+};
+
+const COLORS = ["#FF6B8A", "#FF8E6B", "#FFD93D", "#6BCB77", "#4D96FF", "#9B59B6", "#FF85A2", "#5DADE2"];
+const TEXTS = ["保持好心情", "好好爱自己", "多喝水哦~", "好好吃饭", "别熬夜", "天冷了多穿衣服", "顺顺利利", "我想你了"];
+
+let rootNote = null;      // 用来标记爱心的便签
+let randomCount = 0;
+let randomTimer = null;
+let stopped = false;
+
+// ===== 心形坐标 =====
+function heartPoints(n, sw, sh, nw, nh) {
+  const pts = [];
+  const scale = Math.min(sw, sh) / 45;
+  const cx = sw / 2, cy = sh / 2 - sh * 0.04;
+  for (let i = 0; i < n; i++) {
+    const t = (i / n) * 2 * Math.PI;
+    const x = 16 * Math.pow(Math.sin(t), 3);
+    const y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+    pts.push({ x: cx + x * scale - nw/2, y: cy - y * scale - nh/2 });
+  }
+  return pts;
+}
+
+// ===== 创建便签 =====
+function createNote(x, y, text, color, cls) {
+  const el = document.createElement('div');
+  el.className = 'note' + (cls ? ' ' + cls : '');
+  el.style.cssText = `
+    left:${x}px; top:${y}px;
+    width:${CONFIG.noteW}px; height:${CONFIG.noteH}px;
+    background:${color}; color:#fff; font-size:13px;
+  `;
+  el.textContent = text;
+  // 点击关闭
+  el.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    el.classList.add('float-out');
+    setTimeout(() => el.remove(), 500);
+  });
+  document.body.appendChild(el);
+  return el;
+}
+
+// ===== 停止所有 =====
+function stopAll() {
+  stopped = true;
+  clearTimeout(randomTimer);
+  document.querySelectorAll('.note').forEach((el, i) => {
+    setTimeout(() => {
+      el.classList.add('float-out');
+      setTimeout(() => el.remove(), 500);
+    }, i * 30);
+  });
+  document.getElementById('hint').textContent = '✨ 感谢观看 ✨';
+  document.getElementById('stopBtn').style.display = 'none';
+}
+
+// ===== 随机飘洒 =====
+function randomSpawn() {
+  if (stopped || randomCount >= CONFIG.randomLimit) {
+    if (randomCount >= CONFIG.randomLimit) {
+      document.getElementById('hint').textContent = '🎀 飘洒结束！点击便签关闭，或点"结束"全部清除';
+    }
+    return;
+  }
+  const sw = window.innerWidth, sh = window.innerHeight;
+  const x = Math.random() * (sw - CONFIG.noteW);
+  const y = Math.random() * (sh - CONFIG.noteH);
+  createNote(x, y, TEXTS[Math.floor(Math.random() * TEXTS.length)],
+             COLORS[Math.floor(Math.random() * COLORS.length)]);
+  randomCount++;
+  document.getElementById('hint').textContent = `🌸 随机飘洒中... (${randomCount}/${CONFIG.randomLimit})`;
+  randomTimer = setTimeout(randomSpawn,
+    CONFIG.randomInterval[0] + Math.random() * (CONFIG.randomInterval[1] - CONFIG.randomInterval[0]));
+}
+
+// ===== 主流程 =====
+function main() {
+  const sw = window.innerWidth, sh = window.innerHeight;
+  const pts = heartPoints(CONFIG.total, sw, sh, CONFIG.noteW, CONFIG.noteH);
+
+  pts.forEach((p, i) => {
+    setTimeout(() => {
+      const text = TEXTS[Math.floor(Math.random() * TEXTS.length)];
+      const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+      createNote(p.x, p.y, text, color);
+      if (i === pts.length - 1) {
+        // 爱心展示完毕
+        document.getElementById('hint').textContent = '❤️ 爱心完成！即将开始随机飘洒...';
+        setTimeout(() => {
+          if (!stopped) {
+            randomSpawn();
+          }
+        }, CONFIG.heartDelay);
+      }
+    }, i * 15);
+  });
+}
+
+main();
+</script>
+</body>
+</html>
