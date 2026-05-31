@@ -18,8 +18,8 @@
     display: flex; align-items: center; justify-content: center;
     font-weight: bold; text-align: center; cursor: pointer;
     box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-    animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-    transition: transform 0.15s;
+    animation: popIn 0.4 cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    transition: transform 0.15;
   }
   .note:active { transform: scale(0.9); }
   @keyframes popIn {
@@ -28,12 +28,12 @@
   @keyframes floatAway {
     to { opacity: 0; transform: scale(0.3) translateY(-200px); }
   }
-  .float-out { animation: floatAway 0.5s ease-out forwards !important; }
+  .float-out { animation: floatAway 0.5 ease-out forwards !important; }
 
   #hint {
     position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
     color: rgba(255,255,255,0.6); font-size: 14px; z-index: 9999;
-    pointer-events: none; transition: opacity 0.5s;
+    pointer-events: none; transition: opacity 0.5;
   }
   #stopBtn {
     position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
