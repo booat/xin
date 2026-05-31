@@ -43,9 +43,22 @@
     cursor: pointer; backdrop-filter: blur(10px);
   }
   #stopBtn:active { background: rgba(255,255,255,0.3); }
+  #musicBtn {
+    position: fixed; top: 20px; right: 20px;
+    width: 50px; height: 50px; border-radius: 50%;
+    background: rgba(255,255,255,0.15); color: white;
+    border: 1px solid rgba(255,255,255,0.3);
+    font-size: 24px; z-index: 10000; cursor: pointer;
+    backdrop-filter: blur(10px); transition: background 0.3s;
+  }
+  #musicBtn:active { background: rgba(255,255,255,0.3); }
+  #musicBtn.playing { background: rgba(255,140,200,0.3); border-color: rgba(255,140,200,0.5); }
 </style>
 </head>
 <body>
+
+<audio id="bgm" src="music.m4a" loop preload="auto"></audio>
+<button id="musicBtn" onclick="toggleMusic()" title="播放音乐">🎵</button>
 
 <button id="stopBtn" onclick="stopAll()">⏹ 结束</button>
 <div id="hint">💡 点击便签可关闭 | 爱心展示后随机飘洒</div>
@@ -100,6 +113,24 @@ function createNote(x, y, text, color, cls) {
   });
   document.body.appendChild(el);
   return el;
+}
+
+// ===== 音乐控制 =====
+function toggleMusic() {
+  const bgm = document.getElementById('bgm');
+  const btn = document.getElementById('musicBtn');
+  if (bgm.paused) {
+    bgm.play().then(() => {
+      btn.textContent = '🎶';
+      btn.classList.add('playing');
+    }).catch(() => {
+      alert('播放失败，请再点一次');
+    });
+  } else {
+    bgm.pause();
+    btn.textContent = '🎵';
+    btn.classList.remove('playing');
+  }
 }
 
 // ===== 停止所有 =====
