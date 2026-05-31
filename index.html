@@ -55,16 +55,15 @@ const CONFIG = {
   noteW: 100,        // 便签宽度
   noteH: 48,         // 便签高度
   total: 80,         // 爱心便签数量
-  randomLimit: 40,   // 随机飘洒上限
-  randomInterval: [300, 700], // 随机弹出间隔(ms)
-  heartDelay: 1200,  // 爱心完成后等待多久开始随机(ms)
+  maxTry: 200,       // 尝试多少次找不到空位就认为屏幕满了
+  randomInterval: [150, 350], // 随机弹出间隔(ms)
+  heartDelay: 800,   // 爱心完成后等待多久开始随机(ms)
 };
 
 const COLORS = ["#FF6B8A", "#FF8E6B", "#FFD93D", "#6BCB77", "#4D96FF", "#9B59B6", "#FF85A2", "#5DADE2"];
 const TEXTS = ["保持好心情", "好好爱自己", "多喝水哦~", "好好吃饭", "别熬夜", "天冷了多穿衣服", "顺顺利利", "我想你了"];
 
-let rootNote = null;      // 用来标记爱心的便签
-let randomCount = 0;
+const occupied = [];  // 已占用的矩形 [{x, y, w, h}, ...]
 let randomTimer = null;
 let stopped = false;
 
@@ -116,21 +115,38 @@ function stopAll() {
   document.getElementById('stopBtn').style.display = 'none';
 }
 
+// ===== 碰撞检测 =====
+function isOverlapping(x, y) {
+  for (const r of occupied) {
+    if (x < r.x + r.w && x + CONFIG.noteW > r.x &&
+        y < r.y + r.h && y + CONFIG.noteH > r.y) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function findEmptySpot() {
+  const sw = window.innerWidth, sh = window.innerHeight;
+  for (let i = 0; i < CONFIG.maxTry; i++) {
+    const x = Math.random() * (sw - CONFIG.noteW);
+    const y = Math.random() * (sh - CONFIG.noteH);
+    if (!isOverlapping(x, y)) return { x, y };
+  }
+  return null;
+}
+
 // ===== 随机飘洒 =====
 function randomSpawn() {
-  if (stopped || randomCount >= CONFIG.randomLimit) {
-    if (randomCount >= CONFIG.randomLimit) {
-      document.getElementById('hint').textContent = '🎀 飘洒结束！点击便签关闭，或点"结束"全部清除';
-    }
+  if (stopped) return;
+  const spot = findEmptySpot();
+  if (!spot) {
+    document.getElementById('hint').textContent = '🎀 屏幕已铺满！点击便签关闭，或点"结束"全部清除';
     return;
   }
-  const sw = window.innerWidth, sh = window.innerHeight;
-  const x = Math.random() * (sw - CONFIG.noteW);
-  const y = Math.random() * (sh - CONFIG.noteH);
-  createNote(x, y, TEXTS[Math.floor(Math.random() * TEXTS.length)],
+  createNote(spot.x, spot.y, TEXTS[Math.floor(Math.random() * TEXTS.length)],
              COLORS[Math.floor(Math.random() * COLORS.length)]);
-  randomCount++;
-  document.getElementById('hint').textContent = `🌸 随机飘洒中... (${randomCount}/${CONFIG.randomLimit})`;
+  occupied.push({ x: spot.x, y: spot.y, w: CONFIG.noteW, h: CONFIG.noteH });
   randomTimer = setTimeout(randomSpawn,
     CONFIG.randomInterval[0] + Math.random() * (CONFIG.randomInterval[1] - CONFIG.randomInterval[0]));
 }
@@ -140,21 +156,21 @@ function main() {
   const sw = window.innerWidth, sh = window.innerHeight;
   const pts = heartPoints(CONFIG.total, sw, sh, CONFIG.noteW, CONFIG.noteH);
 
+  // 爱心坐标加入已占用列表
+  pts.forEach(p => occupied.push({ x: p.x, y: p.y, w: CONFIG.noteW, h: CONFIG.noteH }));
+
   pts.forEach((p, i) => {
     setTimeout(() => {
       const text = TEXTS[Math.floor(Math.random() * TEXTS.length)];
       const color = COLORS[Math.floor(Math.random() * COLORS.length)];
       createNote(p.x, p.y, text, color);
       if (i === pts.length - 1) {
-        // 爱心展示完毕
-        document.getElementById('hint').textContent = '❤️ 爱心完成！即将开始随机飘洒...';
+        document.getElementById('hint').textContent = '❤️ 爱心完成！正在铺满屏幕...';
         setTimeout(() => {
-          if (!stopped) {
-            randomSpawn();
-          }
+          if (!stopped) randomSpawn();
         }, CONFIG.heartDelay);
       }
-    }, i * 15);
+    }, i * 12);
   });
 }
 
